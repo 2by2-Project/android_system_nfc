@@ -110,6 +110,9 @@
 #define NFC_STATUS_CONGESTED 0xFF
 typedef uint8_t tNFC_STATUS;
 
+#define UICC1_HOST ((unsigned char)0x80)
+#define UICC2_HOST ((unsigned char)0x81)
+
 /**********************************************
  * NFC Config Parameter IDs defined by NCI
  **********************************************/

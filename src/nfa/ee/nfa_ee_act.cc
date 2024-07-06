@@ -1882,6 +1882,34 @@ void nfa_ee_nci_disc_rsp(tNFA_EE_MSG* p_data) {
 
 /*******************************************************************************
 **
+** Function         nfa_ee_get_supported_tech_list
+**
+** Description      provides the supported technology list of given nfcee id
+**
+** Returns          uint8_t
+**
+*******************************************************************************/
+uint8_t nfa_ee_get_supported_tech_list(uint8_t nfcee_id) {
+  uint8_t tech_list = 0;
+  tNFA_EE_ECB* p_cb = NULL;
+
+  p_cb = nfa_ee_find_ecb(nfcee_id);
+  if (p_cb) {
+    if (p_cb->la_protocol) tech_list |= NFA_TECHNOLOGY_MASK_A;
+    if (p_cb->lb_protocol) tech_list |= NFA_TECHNOLOGY_MASK_B;
+    if (p_cb->lf_protocol) tech_list |= NFA_TECHNOLOGY_MASK_F;
+  } else {
+    LOG(INFO)
+        << StringPrintf("Cannot find cb for given nfcee_id: 0x%x", nfcee_id);
+  }
+  LOG(INFO)
+        << StringPrintf("supported tech list is 0x0%x for given nfcee_id: 0x%x ",
+                   tech_list, nfcee_id);
+  return tech_list;
+}
+
+/*******************************************************************************
+**
 ** Function         nfa_ee_nci_disc_ntf
 **
 ** Description      Process the callback for NFCEE discovery notification

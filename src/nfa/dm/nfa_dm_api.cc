@@ -296,6 +296,22 @@ tNFA_STATUS NFA_GetConfig(uint8_t num_ids, tNFA_PMID* p_param_ids) {
 
 /*******************************************************************************
 **
+** Function         NFA_setFieldDetectMode
+**
+** Description      Updates field detect mode true/false
+**
+** Returns          void
+**
+*******************************************************************************/
+void NFA_SetFieldDetectMode(bool mode) {
+  nfa_dm_cb.isFieldDetectEnabled = mode;
+  LOG(INFO)
+      << StringPrintf("%s fieldDetectMode = 0x%s", __func__,
+                      (nfa_dm_cb.isFieldDetectEnabled) ? "ENABLE" : "DISABLE");
+}
+
+/*******************************************************************************
+**
 ** Function         NFA_RequestExclusiveRfControl
 **
 ** Description      Request exclusive control of NFC.

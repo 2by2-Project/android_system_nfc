@@ -81,6 +81,16 @@
 #define NFA_STATUS_BAD_HANDLE NFC_STATUS_BAD_HANDLE
 /* congested                                        */
 #define NFA_STATUS_CONGESTED NFC_STATUS_CONGESTED
+
+#define NFA_STATUS_ALREADY_INITIALIZED NFC_STATUS_ALREADY_INITIALIZED
+/* More NFA_CE_GET_ROUTING_REVT to follow */
+#define NFA_STATUS_CONTINUE NFC_STATUS_CONTINUE
+/* API is called to perform illegal function */
+#define NFA_STATUS_REFUSED NFC_STATUS_REFUSED
+#define NFA_STATUS_HCI_WTX_TIMEOUT  0xE0
+#define NFA_STATUS_HCI_UNRECOVERABLE_ERROR 0xE1
+#define NFA_STATUS_EE_REMOVED_ERROR 0xE2
+
 typedef uint8_t tNFA_STATUS;
 
 /* Handle for NFA registrations and connections */
@@ -1371,6 +1381,149 @@ extern uint8_t NFA_GetNCIVersion();
 **                  NFA_STATUS_FAILED otherwise
 *******************************************************************************/
 extern tNFA_STATUS NFA_SetPowerSubStateForScreenState(uint8_t ScreenState);
+
+/*******************************************************************************
+**
+** Function         NFA_Send_Core_Reset
+**
+** Description      Performs NCI Core Reset dynamically based on NCI version
+**
+**
+** Returns          SUCCESS/FAIL
+**
+*******************************************************************************/
+//extern tNFA_STATUS NFA_Send_Core_Reset();
+
+/*******************************************************************************
+**
+** Function         NFA_Send_Core_Init
+**
+** Description      Performs NCI Core Init dynamically based on NCI version
+**
+**
+** Returns          void
+**
+*******************************************************************************/
+//extern void NFA_Send_Core_Init(uint8_t** p);
+
+/*******************************************************************************
+**
+** Function:        NFA_GetMwVersion
+**
+** Description:     This function gets the Middleware Version
+**
+** Returns:         First 8 bit Major Version
+**                  Last 8 bit Minor Version
+**
+*******************************************************************************/
+//extern tNFA_MW_VERSION NFA_GetMwVersion();
+
+//extern void NFA_EE_HCI_Control(bool mode);
+//extern tNFA_STATUS NFA_ResetNfcc();
+/*******************************************************************************
+**
+** Function         NFA_checkNfcStateBusy()
+**
+** Description      This function returns whether NFC process is busy or not.
+**
+** Returns          if Nfc state busy return true otherwise false.
+**
++*******************************************************************************/
+//extern bool NFA_checkNfcStateBusy();
+/*******************************************************************************
+**
+** Function         nfc_ncif_getMaxRoutingTableSize
+**
+** Description      This function is called to get the Max supported routing
+*Table size.
+**
+** Returns           Max supported routing Table size
+**
+*******************************************************************************/
+//extern uint16_t nfc_ncif_getMaxRoutingTableSize();
+
+/*******************************************************************************
+**
+** Function:        NFA_SetPreferredUiccId
+**
+** Description:     Set Preferred Uicc ID
+**                  0x02 - UICC1
+**                  0x81 - UICC2
+**
+** Returns:         none:
+**
+*******************************************************************************/
+//extern void NFA_SetPreferredUiccId(uint8_t uicc_id);
+/*******************************************************************************
+**
+** Function         NFA_setFieldDetectMode
+**
+** Description      Updates field detect mode true/false
+**
+** Returns          void
+**
+*******************************************************************************/
+extern void NFA_SetFieldDetectMode(bool mode);
+
+/*******************************************************************************
+**
+** Function         NFA_IsFieldDetectEnabled
+**
+** Description      Returns current status of field detect mode
+**
+** Returns          true/false
+**
+*******************************************************************************/
+//extern bool NFA_IsFieldDetectEnabled();
+/*******************************************************************************
+**
+** Function         NFA_SetRssiMode
+**
+** Description      Updates RSSI mode true/false, This will be effective
+**                  from next RF discovery cycle.
+**
+** Returns          void
+**
+*******************************************************************************/
+//extern void NFA_SetRssiMode(bool enable);
+
+/*******************************************************************************
+**
+** Function         NFA_IsRssiEnabled
+**
+** Description      Returns current status of RSSI mode
+**
+** Returns          true/false
+**
+*******************************************************************************/
+//extern bool NFA_IsRssiEnabled();
+
+/*******************************************************************************
+**
+** Function         NFA_IsRfRemovalDetectionSupported
+**
+** Description      Indicates if RF Removal Detection mode is upported by NFCC
+**
+** Returns          true if supported else false.
+**
+*******************************************************************************/
+//bool NFA_IsRfRemovalDetectionSupported();
+
+/*******************************************************************************
+**
+** Function         NFA_SendRemovalDetectionCmd
+**
+** Description      This function is called to start the procedure of Removal
+**                  Deteciton in Poll Mode
+**
+**                  wait_timeout(ms) - Time duration in milliseconds for which
+**                  NFCC shall execute Removal Detection Procedure.
+**
+** Returns          NFA_STATUS_OK if successfully initiated
+**                  NFA_STATUS_FAILED otherwise
+**
+*******************************************************************************/
+//tNFA_STATUS NFA_SendRemovalDetectionCmd(uint8_t wait_timeout);
 
 /*******************************************************************************
 **

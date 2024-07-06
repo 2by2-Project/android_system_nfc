@@ -85,6 +85,13 @@
 /* A static pipe is added                       */
 #define NFA_HCI_ADD_STATIC_PIPE_EVT 0x16
 
+#define NFA_HCI_CMD_APDU_SENT_EVT  0x17    /* Command APDU sent to server APDU Host        */
+#define NFA_HCI_APDU_ABORTED_EVT   0x18    /* Stopped waiting for Response APDU            */
+#define NFA_HCI_RSP_APDU_RCVD_EVT  0x19    /* Response APDU received from server APDU Host */
+#define NFA_HCI_INIT_COMPLETED     0x20
+#define NFA_SRD_EVT_TIMEOUT 0x21
+#define NFA_SRD_FEATURE_NOT_SUPPORT_EVT 0x22
+
 typedef uint8_t tNFA_HCI_EVT;
 
 /* Max application name length */
@@ -93,14 +100,34 @@ typedef uint8_t tNFA_HCI_EVT;
 #define NFA_MAX_HCI_CMD_LEN 255
 /* Max HCI event length */
 #define NFA_MAX_HCI_RSP_LEN 255
+
+#if (NXP_EXTNS == TRUE)
+/* Max HCI event length */
+#define NFA_MAX_HCI_EVENT_LEN 0x2FC
+#else
 /* Max HCI event length */
 #define NFA_MAX_HCI_EVENT_LEN 300
+#endif
+
 /* Max HCI data length */
 #define NFA_MAX_HCI_DATA_LEN 260
 
 /* NFA HCI PIPE states */
 #define NFA_HCI_PIPE_CLOSED 0x00 /* Pipe is closed */
 #define NFA_HCI_PIPE_OPENED 0x01 /* Pipe is opened */
+
+/* HCI Recovery status*/
+#define NFA_HCI_EE_RECOVERY_STARTED 0x01
+#define NFA_HCI_EE_RECOVERY_COMPLETED 0x02
+#define NFA_HCI_SESSION_ID_LEN 8 /* HCI Session ID length */
+
+/* APDU Pipe information */
+typedef struct
+{
+    bool          reg_info_valid;     /* Indicates max_cmd_apdu_size, max_wait_time are valid    */
+    uint16_t      max_cmd_apdu_size;  /* Maximum length of msg that can be sent on the APDU pipe */
+    uint16_t      max_wait_time;      /* Maximum waiting time for the response on the APDU pipe  */
+} tNFA_HCI_APDU_PIPE_REG_INFO;
 
 typedef uint8_t tNFA_HCI_PIPE_STATE;
 /* Dynamic pipe control block */
@@ -189,6 +216,35 @@ typedef struct {
   uint8_t
       host[NFA_HCI_MAX_HOST_IN_NETWORK]; /* List of host in the host network */
 } tNFA_HCI_HOST_LIST;
+
+/* Data for NFA_HCI_CMD_APDU_SENT_EVT */
+typedef struct
+{
+    tNFC_STATUS     status;                             /* Status of APDU send operation */
+    uint8_t         host_id;                            /* The APDU Server host to which command APDU is sent */
+} tNFA_HCI_CMD_APDU_SENT;
+
+/* Data for NFA_HCI_RSP_APDU_RCVD_EVT */
+typedef struct
+{
+    tNFC_STATUS       status;                             /* Status of APDU received */
+    uint8_t           host_id;                            /* The APDU Server host from which response APDU is received */
+    uint16_t          apdu_len;                           /* Length of Response APDU received */
+    uint8_t           *p_apdu;                            /* Response APDU */
+} tNFA_HCI_RSP_APDU_RCVD;
+
+/* Data for NFA_HCI_APDU_ABORTED_EVT */
+typedef struct
+{
+    tNFC_STATUS     status;                             /* Status of aborting APDU command */
+    uint8_t           host_id;                            /* The APDU Server host to which command APDU was addressed is aborted */
+    uint16_t          atr_len;                           /* Length of Response ATR received */
+    uint8_t           *p_atr;                            /* Response ATR */
+} tNFA_HCI_APDU_ABORTED;
+/* Data for NFA_HCI_INIT_COMPLETED */
+typedef struct {
+  tNFA_STATUS status; /* Status of Enabling HCI Network */
+} tNFA_HCI_INIT_COMPLETED;
 
 /* Data for NFA_HCI_RSP_RCVD_EVT */
 typedef struct {
@@ -282,6 +338,10 @@ typedef union {
                                               NFA_HCI_SET_REG_RSP_EVT */
   tNFA_HCI_INIT hci_init;                  /* NFA_HCI_INIT_EVT               */
   tNFA_HCI_EXIT hci_exit;                  /* NFA_HCI_EXIT_EVT               */
+  tNFA_HCI_CMD_APDU_SENT          apdu_sent;      /* NFA_HCI_CMD_APDU_SENT_EVT      */
+  tNFA_HCI_APDU_ABORTED           apdu_aborted;   /* NFA_HCI_APDU_ABORTED_EVT       */
+  tNFA_HCI_RSP_APDU_RCVD          apdu_rcvd;      /* NFA_HCI_RSP_APDU_RCVD_EVT      */
+  tNFA_HCI_INIT_COMPLETED         init_completed;
   tNFA_HCI_ADD_STATIC_PIPE_EVT pipe_added; /* NFA_HCI_ADD_STATIC_PIPE_EVT    */
 } tNFA_HCI_EVT_DATA;
 
@@ -562,6 +622,81 @@ extern tNFA_STATUS NFA_HciDeletePipe(tNFA_HANDLE hci_handle, uint8_t pipe);
 *******************************************************************************/
 extern tNFA_STATUS NFA_HciAddStaticPipe(tNFA_HANDLE hci_handle, uint8_t host,
                                         uint8_t gate, uint8_t pipe);
+
+/*******************************************************************************
+**
+** Function         NFA_HciSendResponse
+**
+** Description      This function is called to send a response on a pipe created
+**                  by the application.
+**                  The app will be notified by NFA_HCI_RSP_SENT_EVT if an error
+**                  occurs.
+**
+** Returns          NFA_STATUS_OK if successfully initiated
+**                  NFA_STATUS_FAILED otherwise
+**
+*******************************************************************************/
+extern tNFA_STATUS NFA_HciSendResponse(tNFA_HANDLE hci_handle, uint8_t pipe,
+                                       uint8_t response, uint8_t data_size,
+                                       uint8_t* p_data);
+/*******************************************************************************
+**
+** Function         NFA_HciSendApdu
+**
+** Description      This function is called to send APDU commands to one of
+**                  the host that acts as a server APDU host and to receive
+**                  response from that host on APDU pipe.
+**
+**                  The application will be notified by NFA_HCI_CMD_APDU_SENT_EVT
+**                  after successfully sending the APDU command on APDU pipe of
+**                  the specified host or if an error occurs. The application
+**                  should wait for this event before releasing APDU command
+**                  buffer passed as an argument. The application should provide
+**                  response APDU buffer for collecting the response APDU.
+**                  The application will be notified by NFA_HCI_RSP_APDU_RCVD_EVT
+**                  after receiving the response APDU or on timeout if timeout
+**                  can be automatically detected on the pipe (If APDU Pipe is
+**                  connected to APDU Gate implemented as per spec ETSI TS 102
+**                  622 V12.1.0) on destination host.
+**                  If a response buffer is provided by the application, it
+**                  should wait for NFA_HCI_RSP_APDU_RCVD_EVT event or call
+**                  NFA_HciAbortApdu and wait for NFA_HCI_APDU_ABORTED_EVT
+**                  before releasing the response APDU buffer.
+**
+** Returns          NFA_STATUS_OK if successfully initiated
+**                  NFA_STATUS_FAILED otherwise
+**
+*******************************************************************************/
+tNFC_STATUS NFA_HciSendApdu (tNFA_HANDLE  hci_handle,
+                             uint8_t        host_id,
+                             uint16_t       cmd_apdu_len,
+                             uint8_t        *p_cmd_apdu,
+                             uint16_t       rsp_apdu_buf_size,
+                             uint8_t        *p_rsp_apdu_buf,
+                             uint32_t        rsp_timeout);
+
+/*******************************************************************************
+**
+** Function         NFA_HciAbortApdu
+**
+** Description      This function is called to stop waiting for response APDU
+**                  for the command APDU sent by the application on the APDU pipe
+**                  of the specified host. The application will be notified by
+**                  NFA_HCI_APDU_ABORTED_EVT after releasing response buffer
+**                  provided with NFA_HciSendApdu for collecting the response
+**                  APDU and releasing the APDU pipe for sending next command
+**                  APDU on the pipe.
+**                  If APDU server host supports EVT_ABORT then the server host
+**                  is also notified to Abort the APDU command and wait for
+**                  it to confirm with EVT_ATR that it stopped processing the
+**                  command APDU before releasing the response buffer and
+**                  reporting NFA_HCI_APDU_ABORTED_EVT to the application
+**
+** Returns          NFA_STATUS_OK if successfully initiated
+**                  NFA_STATUS_FAILED otherwise
+**
+*******************************************************************************/
+tNFC_STATUS NFA_HciAbortApdu (tNFA_HANDLE hci_handle, uint8_t host_id, uint32_t rsp_timeout);
 
 /*******************************************************************************
 **

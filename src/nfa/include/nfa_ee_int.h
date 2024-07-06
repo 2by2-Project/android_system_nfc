@@ -579,6 +579,7 @@ void nfa_ee_nci_disc_ntf(tNFA_EE_MSG* p_data);
 void nfa_ee_nci_mode_set_rsp(tNFA_EE_MSG* p_data);
 void nfa_ee_nci_nfcee_status_ntf(tNFA_EE_MSG* p_data);
 void nfa_ee_pwr_and_link_ctrl_rsp(tNFA_EE_MSG* p_data);
+uint8_t nfa_ee_get_supported_tech_list(uint8_t nfcee_id);
 void nfa_ee_nci_wait_rsp(tNFA_EE_MSG* p_data);
 void nfa_ee_nci_conn(tNFA_EE_MSG* p_data);
 void nfa_ee_nci_action_ntf(tNFA_EE_MSG* p_data);

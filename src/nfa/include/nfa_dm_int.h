@@ -574,6 +574,10 @@ typedef struct {
   uint8_t pending_power_state; /* pending screen state change received in
                                   LISTEN_ACTIVE state which needs to be applied
                                   after current transaction is completed*/
+
+  uint8_t selected_uicc_id; /* Current selected UICC ID */
+  bool isFieldDetectEnabled; /*Field Detect Enable status*/
+
   /* ChangeDiscoveryTech management */
   tNFA_TECHNOLOGY_MASK change_poll_mask;   /* changing poll tech mask */
   tNFA_TECHNOLOGY_MASK change_listen_mask; /* changing listen tech mask */

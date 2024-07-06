@@ -38,6 +38,8 @@
 #include "nfa_wlc_int.h"
 #include "nfc_int.h"
 
+#include "nfc_config.h"
+
 using android::base::StringPrintf;
 
 /*
@@ -60,6 +62,9 @@ static void nfa_dm_disc_data_cback(uint8_t conn_id, tNFC_CONN_EVT event,
                                    tNFC_CONN* p_data);
 static void nfa_dm_disc_kovio_timeout_cback(TIMER_LIST_ENT* p_tle);
 static void nfa_dm_disc_report_kovio_presence_check(tNFC_STATUS status);
+
+static tNFA_DM_DISC_TECH_PROTO_MASK nfa_dm_config_ee_discover_tech_mask(
+       uint8_t tech_list, tNFA_DM_DISC_TECH_PROTO_MASK dm_disc_mask);
 
 static std::string nfa_dm_disc_state_2_str(uint8_t state);
 static std::string nfa_dm_disc_event_2_str(uint8_t event);
@@ -942,6 +947,8 @@ void nfa_dm_start_rf_discover(void) {
   uint8_t config_params[10], *p;
   uint8_t num_params, xx;
 
+  uint8_t tech_list = 0;
+
   LOG(DEBUG) << __func__;
   /* Make sure that RF discovery was enabled, or some app has exclusive control
    */
@@ -1077,7 +1084,16 @@ void nfa_dm_start_rf_discover(void) {
         dm_disc_mask |= nfa_dm_cb.disc_cb.entry[xx].selected_disc_mask;
       }
     }
-
+    {
+      bool isDynamicUiccEnabled = NfcConfig::getUnsigned(NAME_NXP_DUAL_UICC_ENABLE, 0x00);
+      if (isDynamicUiccEnabled) {
+        tech_list = nfa_ee_get_supported_tech_list(UICC1_HOST);
+        tech_list |= nfa_ee_get_supported_tech_list(UICC2_HOST);
+      } else {
+        tech_list = nfa_ee_get_supported_tech_list(nfa_dm_cb.selected_uicc_id);
+      }
+      dm_disc_mask = nfa_dm_config_ee_discover_tech_mask(tech_list, dm_disc_mask);
+    }
     if (NFC_GetNCIVersion() == NCI_VERSION_1_0) {
       if (dm_disc_mask &
           (NFA_DM_DISC_MASK_PF_NFC_DEP | NFA_DM_DISC_MASK_PF_T3T)) {
@@ -1141,6 +1157,44 @@ void nfa_dm_start_rf_discover(void) {
     nfa_dm_cb.disc_cb.activated_protocol = NFA_PROTOCOL_INVALID;
     nfa_dm_cb.disc_cb.activated_handle = NFA_HANDLE_INVALID;
   }
+}
+
+/*******************************************************************************
+**
+** Function         nfa_dm_config_ee_discover_tech_mask
+**
+** Description      Configured NFCEE Discover technology mask
+**
+** Returns          tNFA_DM_DISC_TECH_PROTO_MASK
+**
+*******************************************************************************/
+static tNFA_DM_DISC_TECH_PROTO_MASK nfa_dm_config_ee_discover_tech_mask(uint8_t
+                         tech_list, tNFA_DM_DISC_TECH_PROTO_MASK dm_disc_mask) {
+      unsigned long fwdEnable = false, hostEnable = false;
+      fwdEnable = NfcConfig::getUnsigned(NAME_FORWARD_FUNCTIONALITY_ENABLE, 0x01);
+      hostEnable = NfcConfig::getUnsigned(NAME_HOST_LISTEN_TECH_MASK, 0x07);
+
+      LOG(INFO)
+       << StringPrintf("fwdEnable:%lu,hostEnable:%lu",fwdEnable,hostEnable);
+
+      LOG(INFO)
+       << StringPrintf("tech_list:0x%x,dm_disc_mask:0x%x",tech_list,dm_disc_mask);
+
+      if ((fwdEnable == false) || (hostEnable == false)) {
+        if ((tech_list == NFA_TECHNOLOGY_MASK_B) ||
+            (tech_list == (NFA_TECHNOLOGY_MASK_B | NFA_TECHNOLOGY_MASK_F))) {
+          dm_disc_mask &=
+              ~(NFA_DM_DISC_MASK_LA_ISO_DEP | NFA_DM_DISC_MASK_LA_NFC_DEP);
+        } else if ((tech_list == NFA_TECHNOLOGY_MASK_A) ||
+               (tech_list == (NFA_TECHNOLOGY_MASK_A | NFA_TECHNOLOGY_MASK_F))){
+          dm_disc_mask &= ~(NFA_DM_DISC_MASK_LB_ISO_DEP);
+        }
+      }
+
+      LOG(INFO)
+        << StringPrintf("dm_disc_mask : 0x%x", dm_disc_mask);
+
+      return dm_disc_mask;
 }
 
 /*******************************************************************************
